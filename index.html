@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RED HORIZON — Humanity's First Mission to Mars</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --red: #c0392b;
+    --red-bright: #e74c3c;
+    --red-glow: #ff4d3d;
+    --orange: #e67e22;
+    --deep: #04080f;
+    --deep2: #060d18;
+    --panel: rgba(4,8,15,0.85);
+    --text: #e8e8f0;
+    --muted: #8892a4;
+    --accent: #1a3a5c;
+  }
+
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: auto; }
+
+  body {
+    background: var(--deep);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CURSOR */
+  #cursor {
+    position: fixed; width:12px; height:12px;
+    border-radius:50%; background: var(--red-glow);
+    pointer-events:none; z-index:9999;
+    transform: translate(-50%,-50%);
+    transition: transform 0.1s, width 0.3s, height 0.3s, opacity 0.3s;
+    mix-blend-mode: screen;
+    box-shadow: 0 0 20px var(--red-glow), 0 0 40px rgba(255,77,61,0.4);
+  }
+  #cursor-ring {
+    position:fixed; width:40px; height:40px;
+    border:1px solid rgba(255,77,61,0.5);
+    border-radius:50%; pointer-events:none; z-index:9998;
+    transform: translate(-50%,-50%);
+    transition: transform 0.2s ease, width 0.3s, height 0.3s;
+  }
+
+  /* CANVAS */
+  #space-canvas {
+    position: fixed;
+    top:0; left:0; width:100%; height:100%;
+    z-index:0;
+    pointer-events:none;
+  }
+
+  /* PROGRESS */
+  #progress-bar {
+    position: fixed; top:0; left:0; height:2px;
+    background: linear-gradient(90deg, var(--red) 0%, var(--red-glow) 50%, #ff9966 100%);
+    z-index:1000; width:0%;
+    box-shadow: 0 0 8px var(--red-glow);
+    transition: width 0.1s;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top:0; left:0; right:0;
+    z-index:100; padding:1.5rem 3rem;
+    display:flex; align-items:center; justify-content:space-between;
+    mix-blend-mode: normal;
+  }
+  .nav-logo {
+    font-family: 'Space Mono', monospace;
+    font-size:0.85rem; letter-spacing:0.3em;
+    color: var(--red-glow);
+    text-transform:uppercase;
+  }
+  .nav-mission {
+    font-size:0.7rem; letter-spacing:0.2em;
+    color: var(--muted); text-transform:uppercase;
+  }
+  .nav-counter {
+    font-family: 'Space Mono', monospace;
+    font-size:0.75rem; color: var(--muted);
+  }
+
+  /* SCENE WRAPPER */
+  .scene-wrapper {
+    position:relative; z-index:10;
+  }
+
+  /* STICKY CONTAINER */
+  .sticky-scene {
+    position: sticky;
+    top:0; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+
+  /* SCROLL SPACER */
+  .scroll-spacer { height:300vh; }
+  .scroll-spacer-sm { height:200vh; }
+
+  /* SCENE TEXT */
+  .scene-content {
+    position:absolute;
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center; z-index:20;
+    padding:2rem;
+    pointer-events:none;
+  }
+
+  .eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size:0.65rem; letter-spacing:0.4em;
+    color: var(--red-glow); text-transform:uppercase;
+    margin-bottom:1.2rem;
+    opacity:0; transform:translateY(20px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .eyebrow.visible { opacity:1; transform:translateY(0); }
+
+  .scene-headline {
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight:700; line-height:0.95;
+    letter-spacing:-0.02em;
+    background: linear-gradient(135deg, #ffffff 0%, #c8d0e0 50%, #8892a4 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+    opacity:0; transform:translateY(40px);
+    transition: opacity 1s ease 0.2s, transform 1s ease 0.2s;
+  }
+  .scene-headline.visible { opacity:1; transform:translateY(0); }
+
+  .scene-headline.red-text {
+    background: linear-gradient(135deg, #ff6b5b 0%, var(--red-glow) 40%, var(--red) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+
+  .scene-sub {
+    margin-top:1.5rem; max-width:500px;
+    font-size:1rem; line-height:1.7;
+    color: var(--muted); font-weight:300;
+    opacity:0; transform:translateY(30px);
+    transition: opacity 0.9s ease 0.5s, transform 0.9s ease 0.5s;
+  }
+  .scene-sub.visible { opacity:1; transform:translateY(0); }
+
+  .stat-row {
+    display:flex; gap:3rem; margin-top:3rem;
+    opacity:0; transform:translateY(20px);
+    transition: opacity 0.9s ease 0.7s, transform 0.9s ease 0.7s;
+  }
+  .stat-row.visible { opacity:1; transform:translateY(0); }
+
+  .stat { text-align:center; }
+  .stat-num {
+    font-family:'Space Mono', monospace;
+    font-size:1.8rem; font-weight:700;
+    color: var(--red-glow);
+    display:block;
+  }
+  .stat-label {
+    font-size:0.65rem; letter-spacing:0.2em;
+    text-transform:uppercase; color:var(--muted);
+    display:block; margin-top:0.3rem;
+  }
+
+  /* HERO */
+  #hero {
+    height:100vh; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; text-align:center;
+    overflow:hidden;
+  }
+
+  .hero-title {
+    font-size: clamp(5rem, 15vw, 14rem);
+    font-weight:700; line-height:0.88;
+    letter-spacing:-0.04em;
+    position:relative; z-index:5;
+  }
+  .hero-title .line1 {
+    display:block;
+    background: linear-gradient(135deg, #ffffff 0%, #e8ecf0 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    transform:translateY(80px); opacity:0;
+    animation: heroReveal 1.4s cubic-bezier(0.16,1,0.3,1) 0.3s forwards;
+  }
+  .hero-title .line2 {
+    display:block;
+    background: linear-gradient(135deg, var(--red-glow) 0%, var(--red) 60%, #8b1a0a 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    transform:translateY(80px); opacity:0;
+    animation: heroReveal 1.4s cubic-bezier(0.16,1,0.3,1) 0.6s forwards;
+  }
+
+  @keyframes heroReveal {
+    to { transform:translateY(0); opacity:1; }
+  }
+
+  .hero-tagline {
+    font-family:'Space Mono', monospace;
+    font-size:0.8rem; letter-spacing:0.35em;
+    color:var(--muted); text-transform:uppercase;
+    margin-top:2rem; z-index:5;
+    opacity:0; animation: fadeUp 1s ease 1.2s forwards;
+  }
+
+  .hero-scroll-hint {
+    position:absolute; bottom:3rem;
+    display:flex; flex-direction:column; align-items:center;
+    gap:0.5rem; z-index:5;
+    opacity:0; animation: fadeUp 1s ease 1.8s forwards;
+  }
+  .scroll-line {
+    width:1px; height:60px;
+    background: linear-gradient(to bottom, transparent, var(--red-glow));
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+  @keyframes scrollPulse {
+    0%,100% { opacity:0.3; transform:scaleY(1); }
+    50% { opacity:1; transform:scaleY(1.2); }
+  }
+  .scroll-text {
+    font-family:'Space Mono', monospace;
+    font-size:0.6rem; letter-spacing:0.3em;
+    color:var(--muted); text-transform:uppercase;
+  }
+
+  @keyframes fadeUp {
+    to { opacity:1; }
+  }
+
+  /* MISSION CHAPTERS */
+  .chapter-marker {
+    position:absolute; left:3rem; top:50%;
+    transform:translateY(-50%);
+    z-index:30; pointer-events:none;
+  }
+  .chapter-num {
+    font-family:'Space Mono', monospace;
+    font-size:0.65rem; color:var(--red-glow);
+    letter-spacing:0.2em; margin-bottom:0.5rem;
+    display:block;
+  }
+  .chapter-title {
+    font-size:0.7rem; color:var(--muted);
+    letter-spacing:0.15em; text-transform:uppercase;
+    writing-mode:vertical-rl;
+    transform:rotate(180deg);
+    display:block;
+  }
+
+  /* PARTICLE OVERLAY */
+  #particle-canvas {
+    position:fixed; top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none; z-index:2;
+  }
+
+  /* DATA READOUT */
+  .data-readout {
+    position:fixed; right:2.5rem; top:50%;
+    transform:translateY(-50%);
+    z-index:50;
+    display:flex; flex-direction:column; gap:1rem;
+  }
+  .data-line {
+    font-family:'Space Mono', monospace;
+    font-size:0.6rem; color:rgba(136,146,164,0.4);
+    letter-spacing:0.15em; text-align:right;
+    transition: color 0.5s;
+  }
+  .data-line.active { color:var(--red-glow); }
+
+  /* SCANLINE */
+  .scanline {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.008) 2px,
+      rgba(255,255,255,0.008) 4px
+    );
+    pointer-events:none; z-index:1; opacity:0.5;
+  }
+
+  /* VIGNETTE */
+  .vignette {
+    position:fixed; top:0; left:0; right:0; bottom:0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(4,8,15,0.85) 100%);
+    pointer-events:none; z-index:3;
+  }
+
+  /* SCENE DIVIDERS */
+  .scene-divider {
+    position:relative; z-index:10;
+    height:1px;
+    background: linear-gradient(90deg, transparent 0%, var(--red) 50%, transparent 100%);
+    opacity:0.3; margin:0 auto; width:60%;
+  }
+
+  /* TIMELINE */
+  .timeline-scene {
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:5rem 3rem;
+    position:relative; z-index:20;
+  }
+
+  .timeline-grid {
+    display:grid; grid-template-columns: 1fr 1px 1fr;
+    gap:0 3rem; max-width:900px; width:100%;
+  }
+
+  .timeline-item-left { text-align:right; padding:2rem 0; }
+  .timeline-item-right { padding:2rem 0; }
+  .timeline-line { background: linear-gradient(to bottom, transparent, var(--red-glow), transparent); }
+
+  .timeline-date {
+    font-family:'Space Mono', monospace;
+    font-size:0.65rem; color:var(--red-glow);
+    letter-spacing:0.2em; margin-bottom:0.5rem; display:block;
+  }
+  .timeline-event {
+    font-size:1.1rem; font-weight:600;
+    color:var(--text); margin-bottom:0.4rem;
+  }
+  .timeline-desc {
+    font-size:0.8rem; color:var(--muted); line-height:1.6;
+  }
+
+  .dot-center {
+    position:absolute; left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    width:8px; height:8px;
+    border-radius:50%; background:var(--red-glow);
+    box-shadow: 0 0 12px var(--red-glow);
+  }
+
+  /* COLONY */
+  .colony-scene {
+    min-height:100vh; display:flex;
+    align-items:center; justify-content:center;
+    flex-direction:column; padding:5rem 2rem;
+    position:relative; z-index:20;
+    pointer-events:all;
+  }
+
+  .colony-grid {
+    display:grid; grid-template-columns: repeat(3,1fr);
+    gap:1.5rem; max-width:900px; width:100%;
+    margin-top:4rem;
+  }
+
+  .colony-card {
+    background: rgba(255,255,255,0.03);
+    border:1px solid rgba(255,77,61,0.12);
+    border-radius:4px; padding:2rem 1.5rem;
+    position:relative; overflow:hidden;
+    opacity:0; transform:translateY(30px);
+    transition: opacity 0.8s ease, transform 0.8s ease, border-color 0.3s;
+  }
+  .colony-card:hover { border-color:rgba(255,77,61,0.4); }
+  .colony-card.visible { opacity:1; transform:translateY(0); }
+  .colony-card::before {
+    content:''; position:absolute;
+    top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, transparent, var(--red-glow), transparent);
+    opacity:0; transition:opacity 0.3s;
+  }
+  .colony-card:hover::before { opacity:1; }
+
+  .card-icon {
+    font-size:1.5rem; margin-bottom:1rem; display:block;
+  }
+  .card-title {
+    font-size:0.85rem; font-weight:600;
+    letter-spacing:0.05em; margin-bottom:0.5rem;
+    color:var(--text);
+  }
+  .card-desc {
+    font-size:0.75rem; color:var(--muted); line-height:1.6;
+  }
+
+  /* FINAL SCREEN */
+  #finale {
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction:column; text-align:center;
+    padding:5rem 2rem; position:relative; z-index:20;
+  }
+
+  .finale-logo {
+    font-family:'Space Mono', monospace;
+    font-size:0.7rem; letter-spacing:0.4em;
+    color:var(--red-glow); margin-bottom:3rem;
+    text-transform:uppercase;
+  }
+
+  .finale-title {
+    font-size:clamp(3rem,8vw,6rem);
+    font-weight:700; line-height:0.95;
+    background: linear-gradient(135deg, #fff 0%, #c8d0e0 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    margin-bottom:1.5rem;
+  }
+
+  .finale-sub {
+    font-size:1rem; color:var(--muted);
+    max-width:480px; line-height:1.7; margin-bottom:3rem;
+  }
+
+  .finale-cta {
+    display:inline-flex; align-items:center; gap:0.8rem;
+    background: var(--red); color:#fff;
+    padding:1rem 2.5rem; border-radius:2px;
+    font-size:0.8rem; letter-spacing:0.15em;
+    text-transform:uppercase; font-family:'Space Mono', monospace;
+    cursor:pointer; border:none;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
+    pointer-events:all;
+    text-decoration:none;
+    position:relative; z-index:30;
+  }
+  .finale-cta:hover {
+    background:var(--red-bright);
+    box-shadow: 0 0 40px rgba(231,76,60,0.4);
+    transform: translateY(-2px);
+  }
+  .finale-cta:active {
+    transform: translateY(0px);
+  }
+
+  .nav-logo { cursor: pointer; }
+
+  .colony-card { cursor: default; }
+
+  /* MEDIA */
+  @media (max-width: 768px) {
+    .chapter-marker { display:none; }
+    .data-readout { display:none; }
+    nav { padding:1rem 1.5rem; }
+    .colony-grid { grid-template-columns:1fr; }
+    .timeline-grid { grid-template-columns:1fr; gap:1rem; }
+    .timeline-line { display:none; }
+    .timeline-item-left { text-align:left; }
+  }
+
+  /* NOISE OVERLAY */
+  #noise {
+    position:fixed; top:-50%; left:-50%;
+    width:200%; height:200%;
+    opacity:0.03; pointer-events:none; z-index:1;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:noiseMove 0.5s steps(1) infinite;
+  }
+  @keyframes noiseMove {
+    0%{transform:translate(0,0)}25%{transform:translate(-5%,-10%)}50%{transform:translate(-15%,5%)}75%{transform:translate(5%,-5%)}100%{transform:translate(-5%,10%)}
+  }
+</style>
+</head>
+<body>
+
+<div id="noise"></div>
+<div class="scanline"></div>
+<div class="vignette"></div>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<div id="progress-bar"></div>
+<canvas id="space-canvas"></canvas>
+<canvas id="particle-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-logo" id="nav-logo" style="cursor:pointer;" title="Back to top">RED HORIZON</span>
+  <span class="nav-mission">Mission Ares-I · 2047</span>
+  <span class="nav-counter" id="nav-counter">000 / 006</span>
+</nav>
+
+<!-- DATA READOUT -->
+<div class="data-readout" id="data-readout">
+  <span class="data-line" id="dr1">VELOCITY: 28,000 km/h</span>
+  <span class="data-line" id="dr2">DISTANCE: 0 km</span>
+  <span class="data-line" id="dr3">CREW: 6 ASTRONAUTS</span>
+  <span class="data-line" id="dr4">STATUS: NOMINAL</span>
+  <span class="data-line" id="dr5">MISSION DAY: 001</span>
+</div>
+
+<!-- ===== HERO ===== -->
+<section id="hero">
+  <h1 class="hero-title">
+    <span class="line1">RED</span>
+    <span class="line2">HORIZON</span>
+  </h1>
+  <p class="hero-tagline">Humanity's First Mission to Mars — 2047</p>
+  <div class="hero-scroll-hint">
+    <div class="scroll-line"></div>
+    <span class="scroll-text">Scroll to begin</span>
+  </div>
+</section>
+
+<!-- ===== SCENE 1: EARTH & LAUNCH ===== -->
+<div class="scene-wrapper" id="scene-launch">
+  <div class="scroll-spacer"></div>
+  <div class="sticky-scene" id="sticky-launch">
+    <div class="chapter-marker">
+      <span class="chapter-num">01 / 06</span>
+      <span class="chapter-title">Earth Launch</span>
+    </div>
+    <div class="scene-content" id="content-launch">
+      <span class="eyebrow" id="ey1">Kennedy Space Center, Florida</span>
+      <h2 class="scene-headline" id="hl1">IGNITION<br><span class="red-text">SEQUENCE</span></h2>
+      <p class="scene-sub" id="sub1">Six astronauts. One ship. The entire weight of human ambition pressed into a moment of fire and thunder. Ares-I lifts off at 04:17 UTC.</p>
+      <div class="stat-row" id="stats1">
+        <div class="stat"><span class="stat-num">6</span><span class="stat-label">Crew</span></div>
+        <div class="stat"><span class="stat-num">72M</span><span class="stat-label">Thrust lbf</span></div>
+        <div class="stat"><span class="stat-num">04:17</span><span class="stat-label">Launch UTC</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCENE 2: SPACE TRAVEL ===== -->
+<div class="scene-wrapper" id="scene-travel">
+  <div class="scroll-spacer"></div>
+  <div class="sticky-scene" id="sticky-travel">
+    <div class="chapter-marker">
+      <span class="chapter-num">02 / 06</span>
+      <span class="chapter-title">Deep Space</span>
+    </div>
+    <div class="scene-content" id="content-travel">
+      <span class="eyebrow" id="ey2">Day 47 — Trans-Mars Injection</span>
+      <h2 class="scene-headline" id="hl2">INTO THE<br><span class="red-text">VOID</span></h2>
+      <p class="scene-sub" id="sub2">Beyond Earth's magnetic embrace, the crew enters the interplanetary medium. Stars become the only compass. Silence, their closest companion.</p>
+      <div class="stat-row" id="stats2">
+        <div class="stat"><span class="stat-num">7.6M</span><span class="stat-label">km from Earth</span></div>
+        <div class="stat"><span class="stat-num">34K</span><span class="stat-label">km/h</span></div>
+        <div class="stat"><span class="stat-num">180</span><span class="stat-label">Days remaining</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCENE 3: ASTEROID FIELD ===== -->
+<div class="scene-wrapper" id="scene-asteroid">
+  <div class="scroll-spacer"></div>
+  <div class="sticky-scene" id="sticky-asteroid">
+    <div class="chapter-marker">
+      <span class="chapter-num">03 / 06</span>
+      <span class="chapter-title">Asteroid Belt</span>
+    </div>
+    <div class="scene-content" id="content-asteroid">
+      <span class="eyebrow" id="ey3">Day 112 — Main Belt Crossing</span>
+      <h2 class="scene-headline" id="hl3">THROUGH<br><span class="red-text">THE BELT</span></h2>
+      <p class="scene-sub" id="sub3">Navigation AI executes 4,700 micro-corrections. Ancient rock, forged in the solar system's birth, drifts past in eerie silence. Every second, a calculation. Every calculation, survival.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCENE 4: MARS APPROACH ===== -->
+<div class="scene-wrapper" id="scene-mars">
+  <div class="scroll-spacer"></div>
+  <div class="sticky-scene" id="sticky-mars">
+    <div class="chapter-marker">
+      <span class="chapter-num">04 / 06</span>
+      <span class="chapter-title">Mars Approach</span>
+    </div>
+    <div class="scene-content" id="content-mars">
+      <span class="eyebrow" id="ey4">Day 209 — Mars Orbital Insertion</span>
+      <h2 class="scene-headline" id="hl4">THE<br><span class="red-text">RED PLANET</span></h2>
+      <p class="scene-sub" id="sub4">A rust-colored world fills the viewport. Ancient canyons, dormant volcanoes, and polar ice caps — a world that once held water, that may hold life.</p>
+      <div class="stat-row" id="stats4">
+        <div class="stat"><span class="stat-num">225M</span><span class="stat-label">km traveled</span></div>
+        <div class="stat"><span class="stat-num">−63°C</span><span class="stat-label">Surface temp</span></div>
+        <div class="stat"><span class="stat-num">24.6h</span><span class="stat-label">Martian day</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCENE 5: LANDING ===== -->
+<div class="scene-wrapper" id="scene-landing">
+  <div class="scroll-spacer-sm"></div>
+  <div class="sticky-scene" id="sticky-landing">
+    <div class="chapter-marker">
+      <span class="chapter-num">05 / 06</span>
+      <span class="chapter-title">Touchdown</span>
+    </div>
+    <div class="scene-content" id="content-landing">
+      <span class="eyebrow" id="ey5">Mission Day 218 — Isidis Planitia</span>
+      <h2 class="scene-headline" id="hl5"><span class="red-text">TOUCH</span><br>DOWN</h2>
+      <p class="scene-sub" id="sub5">"The Eagle has landed" echoed across time. Now, a new phrase joins history: "Ares has landed." Seven minutes of terror. One moment of triumph.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TIMELINE ===== -->
+<div class="timeline-scene" id="timeline">
+  <div style="width:100%; max-width:900px; text-align:center; position:relative; z-index:10;">
+    <span class="eyebrow visible" style="display:block; margin:0 auto 1rem;">Mission Timeline</span>
+    <h2 style="font-size:clamp(2rem,5vw,3.5rem); font-weight:700; background:linear-gradient(135deg,#fff,#8892a4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:4rem;">227 DAYS TO HISTORY</h2>
+    <div class="timeline-grid" style="position:relative;">
+      <div class="timeline-item-left">
+        <span class="timeline-date">DAY 001</span>
+        <div class="timeline-event">Earth Departure</div>
+        <div class="timeline-desc">Launch from KSC. Trans-Mars injection burn complete.</div>
+      </div>
+      <div class="timeline-line" style="position:relative;">
+        <div class="dot-center"></div>
+      </div>
+      <div class="timeline-item-right" style="padding-top:4rem;">
+        <span class="timeline-date">DAY 047</span>
+        <div class="timeline-event">Lunar Flyby</div>
+        <div class="timeline-desc">Gravity assist maneuver. Final Earth sighting.</div>
+      </div>
+
+      <div class="timeline-item-left" style="padding-top:2rem;">
+        <span class="timeline-date">DAY 112</span>
+        <div class="timeline-event">Belt Crossing</div>
+        <div class="timeline-desc">Asteroid field navigation. Zero incidents.</div>
+      </div>
+      <div class="timeline-line"></div>
+      <div class="timeline-item-right" style="padding-top:5rem;">
+        <span class="timeline-date">DAY 191</span>
+        <div class="timeline-event">Solar Storm</div>
+        <div class="timeline-desc">Crew sheltered. Systems nominal after 14-hour event.</div>
+      </div>
+
+      <div class="timeline-item-left" style="padding-top:2rem;">
+        <span class="timeline-date">DAY 209</span>
+        <div class="timeline-event">Mars Orbit</div>
+        <div class="timeline-desc">Orbital insertion burn. Planet confirmed in viewport.</div>
+      </div>
+      <div class="timeline-line"></div>
+      <div class="timeline-item-right" style="padding-top:4rem;">
+        <span class="timeline-date">DAY 218</span>
+        <div class="timeline-event">Touchdown</div>
+        <div class="timeline-desc">Ares-I lands. First human footsteps on Mars.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCENE 6: COLONY ===== -->
+<div class="colony-scene" id="scene-colony">
+  <div class="chapter-marker" style="position:absolute; left:3rem; top:5rem; transform:none;">
+    <span class="chapter-num">06 / 06</span>
+  </div>
+  <span class="eyebrow visible" style="display:block;">Isidis Base Alpha</span>
+  <h2 class="scene-headline visible" style="transition-delay:0s;">THE<br><span class="red-text">COLONY</span></h2>
+  <p class="scene-sub visible" style="transition-delay:0s; margin-top:1rem;">Humanity's first permanent settlement beyond Earth. Six habitats, 12 crew members, and the beginning of a multi-planetary species.</p>
+  <div class="colony-grid">
+    <div class="colony-card" id="cc1" style="transition-delay:0.1s;">
+      <span class="card-icon">⬡</span>
+      <div class="card-title">Habitat Modules</div>
+      <div class="card-desc">Six pressurized domes connected by sealed corridors. 420 m² of living space at 1.0 bar.</div>
+    </div>
+    <div class="colony-card" id="cc2" style="transition-delay:0.25s;">
+      <span class="card-icon">◈</span>
+      <div class="card-title">Power Array</div>
+      <div class="card-desc">48 solar panels with nuclear RTG backup. 240 kW continuous output capacity.</div>
+    </div>
+    <div class="colony-card" id="cc3" style="transition-delay:0.4s;">
+      <span class="card-icon">⊕</span>
+      <div class="card-title">Water Extraction</div>
+      <div class="card-desc">Sub-surface ice drilling yields 200L per Martian sol. Fully recycled closed loop.</div>
+    </div>
+    <div class="colony-card" id="cc4" style="transition-delay:0.55s;">
+      <span class="card-icon">⊞</span>
+      <div class="card-title">Greenhouse Bay</div>
+      <div class="card-desc">First extraterrestrial crops growing in processed Martian regolith and hydroponic beds.</div>
+    </div>
+    <div class="colony-card" id="cc5" style="transition-delay:0.7s;">
+      <span class="card-icon">◎</span>
+      <div class="card-title">Research Lab</div>
+      <div class="card-desc">Full genomics lab, geology suite, and atmospheric sampling station operating 24/7.</div>
+    </div>
+    <div class="colony-card" id="cc6" style="transition-delay:0.85s;">
+      <span class="card-icon">⬟</span>
+      <div class="card-title">Comm Array</div>
+      <div class="card-desc">14-minute signal delay to Earth. Daily broadcasts reach 4.2 billion viewers.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FINALE ===== -->
+<section id="finale">
+  <div class="finale-logo">Red Horizon · Mission Ares-I</div>
+  <h2 class="finale-title">We Are<br>Martians Now</h2>
+  <p class="finale-sub">The story of humanity does not end on Earth. It extends across the stars, one impossible dream at a time.</p>
+  <a class="finale-cta" href="#hero" id="btn-begin-again">Begin Again ↑</a>
+  <div style="margin-top:4rem; font-family:'Space Mono',monospace; font-size:0.6rem; color:rgba(136,146,164,0.3); letter-spacing:0.2em; text-align:center;">
+    MISSION COMPLETE · CREW SAFE · HISTORY MADE
+  </div>
+</section>
+
+<script>
+// ============================================================
+// CURSOR — with hover states on interactive elements
+// ============================================================
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+
+document.addEventListener('mousemove', e=>{
+  mx=e.clientX; my=e.clientY;
+  cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+});
+
+// Expand cursor on hoverable elements
+const hoverTargets = 'a, button, .colony-card, .nav-logo, .finale-cta, [data-hover]';
+document.addEventListener('mouseover', e=>{
+  if(e.target.closest(hoverTargets)){
+    cursor.style.width='20px';
+    cursor.style.height='20px';
+    cursor.style.opacity='0.7';
+    ring.style.width='60px';
+    ring.style.height='60px';
+    ring.style.borderColor='rgba(255,77,61,0.8)';
+  }
+});
+document.addEventListener('mouseout', e=>{
+  if(e.target.closest(hoverTargets)){
+    cursor.style.width='12px';
+    cursor.style.height='12px';
+    cursor.style.opacity='1';
+    ring.style.width='40px';
+    ring.style.height='40px';
+    ring.style.borderColor='rgba(255,77,61,0.5)';
+  }
+});
+
+function animRing(){
+  rx+=(mx-rx)*0.12; ry+=(my-ry)*0.12;
+  ring.style.left=rx+'px'; ring.style.top=ry+'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+// ============================================================
+// SMOOTH SCROLL — Begin Again & Nav Logo
+// ============================================================
+document.getElementById('btn-begin-again').addEventListener('click', e=>{
+  e.preventDefault();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.getElementById('nav-logo').addEventListener('click', ()=>{
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ============================================================
+// MAIN 3D CANVAS — Three.js via CDN
+// ============================================================
+const script3 = document.createElement('script');
+script3.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+script3.onload = initThreeScene;
+document.head.appendChild(script3);
+
+function initThreeScene(){
+  const canvas = document.getElementById('space-canvas');
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x04080f, 1);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 2000);
+  camera.position.set(0, 0, 5);
+
+  // Fog
+  scene.fog = new THREE.FogExp2(0x04080f, 0.015);
+
+  // ---- STARFIELD ----
+  const starCount = 8000;
+  const starGeo = new THREE.BufferGeometry();
+  const starPos = new Float32Array(starCount*3);
+  const starSize = new Float32Array(starCount);
+  for(let i=0;i<starCount;i++){
+    const theta=Math.random()*Math.PI*2;
+    const phi=Math.acos(2*Math.random()-1);
+    const r=50+Math.random()*400;
+    starPos[i*3]=r*Math.sin(phi)*Math.cos(theta);
+    starPos[i*3+1]=r*Math.sin(phi)*Math.sin(theta);
+    starPos[i*3+2]=r*Math.cos(phi);
+    starSize[i]=0.3+Math.random()*1.5;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+  starGeo.setAttribute('size', new THREE.BufferAttribute(starSize,1));
+
+  const starMat = new THREE.PointsMaterial({
+    color:0xffffff, size:0.5, sizeAttenuation:true,
+    transparent:true, opacity:0.8
+  });
+  const stars = new THREE.Points(starGeo, starMat);
+  scene.add(stars);
+
+  // ---- EARTH ----
+  const earthGeo = new THREE.SphereGeometry(1.8, 64, 64);
+  const earthMat = new THREE.MeshPhongMaterial({
+    color: 0x1a4480,
+    emissive: 0x0a1a30,
+    specular: 0x224466,
+    shininess: 80,
+  });
+  const earth = new THREE.Mesh(earthGeo, earthMat);
+  earth.position.set(0, 0, 0);
+  scene.add(earth);
+
+  // Earth clouds layer
+  const cloudGeo = new THREE.SphereGeometry(1.84, 64, 64);
+  const cloudMat = new THREE.MeshPhongMaterial({
+    color:0xffffff, transparent:true, opacity:0.25,
+    depthWrite:false
+  });
+  const clouds = new THREE.Mesh(cloudGeo, cloudMat);
+  scene.add(clouds);
+
+  // Atmosphere glow
+  const atmGeo = new THREE.SphereGeometry(2.0, 64, 64);
+  const atmMat = new THREE.MeshPhongMaterial({
+    color: 0x2266cc, transparent:true, opacity:0.15,
+    side:THREE.BackSide, depthWrite:false
+  });
+  const atmosphere = new THREE.Mesh(atmGeo, atmMat);
+  scene.add(atmosphere);
+
+  // ---- MARS ----
+  const marsGeo = new THREE.SphereGeometry(1.5, 64, 64);
+  const marsMat = new THREE.MeshPhongMaterial({
+    color: 0x8b2500,
+    emissive: 0x3a0a00,
+    specular: 0x442211,
+    shininess: 30,
+  });
+  const mars = new THREE.Mesh(marsGeo, marsMat);
+  mars.position.set(4, 0, -3);
+  mars.visible = false;
+  scene.add(mars);
+
+  // Mars polar caps
+  const capGeo = new THREE.SphereGeometry(1.52, 32, 32);
+  const capMat = new THREE.MeshPhongMaterial({
+    color:0xdde8f0, transparent:true, opacity:0.7,
+    depthWrite:false
+  });
+  const marsCap = new THREE.Mesh(capGeo, capMat);
+  marsCap.visible = false;
+  scene.add(marsCap);
+
+  // ---- ROCKET ----
+  const rocketGroup = new THREE.Group();
+  // Body
+  const bodyGeo = new THREE.CylinderGeometry(0.07, 0.1, 0.8, 8);
+  const metalMat = new THREE.MeshPhongMaterial({color:0xccccdd, specular:0xffffff, shininess:150});
+  const body = new THREE.Mesh(bodyGeo, metalMat);
+  rocketGroup.add(body);
+  // Nose
+  const noseGeo = new THREE.ConeGeometry(0.07, 0.3, 8);
+  const nose = new THREE.Mesh(noseGeo, metalMat);
+  nose.position.y = 0.55; rocketGroup.add(nose);
+  // Fins
+  for(let i=0;i<4;i++){
+    const finGeo = new THREE.BoxGeometry(0.18, 0.25, 0.02);
+    const fin = new THREE.Mesh(finGeo, metalMat);
+    fin.position.y = -0.32;
+    fin.rotation.y = (i/4)*Math.PI*2;
+    fin.position.x = Math.sin(fin.rotation.y)*0.12;
+    fin.position.z = Math.cos(fin.rotation.y)*0.12;
+    rocketGroup.add(fin);
+  }
+  rocketGroup.position.set(0, -3, 2.5);
+  rocketGroup.rotation.z = 0.1;
+  scene.add(rocketGroup);
+
+  // Rocket flame
+  const flameGeo = new THREE.ConeGeometry(0.06, 0.4, 8);
+  const flameMat = new THREE.MeshBasicMaterial({color:0xff6600, transparent:true, opacity:0.85});
+  const flame = new THREE.Mesh(flameGeo, flameMat);
+  flame.rotation.z = Math.PI;
+  flame.position.y = -0.65;
+  rocketGroup.add(flame);
+
+  // ---- ASTEROIDS ----
+  const asteroids = [];
+  const asteroidGroup = new THREE.Group();
+  for(let i=0;i<120;i++){
+    const r = 0.04+Math.random()*0.18;
+    const geo = new THREE.IcosahedronGeometry(r, 0);
+    const mat = new THREE.MeshPhongMaterial({
+      color: new THREE.Color(0.3+Math.random()*0.2, 0.2+Math.random()*0.15, 0.1+Math.random()*0.1),
+      shininess:10
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    const spread = 15;
+    mesh.position.set(
+      (Math.random()-0.5)*spread*2,
+      (Math.random()-0.5)*spread*0.3,
+      (Math.random()-0.5)*spread
+    );
+    mesh.rotation.set(Math.random()*Math.PI*2, Math.random()*Math.PI*2, Math.random()*Math.PI*2);
+    const speed = (Math.random()-0.5)*0.005;
+    asteroids.push({mesh, rx:Math.random()*0.003, ry:Math.random()*0.003, drift:speed});
+    asteroidGroup.add(mesh);
+  }
+  asteroidGroup.visible = false;
+  scene.add(asteroidGroup);
+
+  // ---- NEBULA PARTICLES ----
+  const nebCount = 300;
+  const nebGeo = new THREE.BufferGeometry();
+  const nebPos = new Float32Array(nebCount*3);
+  for(let i=0;i<nebCount;i++){
+    nebPos[i*3]=(Math.random()-0.5)*30;
+    nebPos[i*3+1]=(Math.random()-0.5)*15;
+    nebPos[i*3+2]=(Math.random()-0.5)*20-5;
+  }
+  nebGeo.setAttribute('position', new THREE.BufferAttribute(nebPos,3));
+  const nebMat = new THREE.PointsMaterial({
+    color:0xff4422, size:0.12, transparent:true, opacity:0.0,
+    sizeAttenuation:true
+  });
+  const nebula = new THREE.Points(nebGeo, nebMat);
+  nebula.visible=false;
+  scene.add(nebula);
+
+  // ---- LANDING DUST ----
+  const dustCount = 500;
+  const dustGeo = new THREE.BufferGeometry();
+  const dustPos = new Float32Array(dustCount*3);
+  const dustVel = [];
+  for(let i=0;i<dustCount;i++){
+    const a=Math.random()*Math.PI*2;
+    const r=Math.random()*2;
+    dustPos[i*3]=Math.cos(a)*r;
+    dustPos[i*3+1]=0;
+    dustPos[i*3+2]=Math.sin(a)*r;
+    dustVel.push({vx:(Math.cos(a))*0.01, vy:0.008+Math.random()*0.01, vz:(Math.sin(a))*0.01, life:Math.random()});
+  }
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos,3));
+  const dustMat = new THREE.PointsMaterial({color:0xcc8844, size:0.04, transparent:true, opacity:0.0});
+  const dust = new THREE.Points(dustGeo, dustMat);
+  dust.visible=false;
+  scene.add(dust);
+    // ---- LIGHTS ----
+  const sunLight = new THREE.DirectionalLight(0xfff5e0, 2.5);
+  sunLight.position.set(10, 5, 10);
+  scene.add(sunLight);
+  scene.add(new THREE.AmbientLight(0x0a1020, 1));
+  const redFill = new THREE.PointLight(0xff3300, 0, 8);
+  redFill.position.set(0,0,4);
+  scene.add(redFill);
+
+  // ============================================================
+  // SCROLL DRIVEN ANIMATION
+  // ============================================================
+  let scrollProgress = 0;
+  let targetCamX=0, targetCamY=0, targetCamZ=5;
+  let targetCamRotX=0, targetCamRotY=0;
+  let currentScene = 0;
+  let time = 0;
+
+  window.addEventListener('scroll', ()=>{
+    const maxScroll = document.body.scrollHeight - window.innerHeight;
+    scrollProgress = window.scrollY / maxScroll;
+    updateScene();
+    updateProgress();
+    updateUI();
+  });
+
+  function updateProgress(){
+    document.getElementById('progress-bar').style.width = (scrollProgress*100)+'%';
+  }
+
+  function updateUI(){
+    // Scene detection by scroll
+    const s = scrollProgress;
+    let sc = 0;
+    if(s>0.08) sc=1;
+    if(s>0.25) sc=2;
+    if(s>0.4) sc=3;
+    if(s>0.55) sc=4;
+    if(s>0.7) sc=5;
+    if(s>0.82) sc=6;
+
+    const names = ['000','001','002','003','004','005','006'];
+    document.getElementById('nav-counter').textContent = `0${sc < 10 ? '0'+sc : sc} / 006`;
+
+    // Data readout
+    const dr = document.getElementById('data-readout');
+    const dr2 = document.getElementById('dr2');
+    const dr5 = document.getElementById('dr5');
+    if(s>0.08){
+      const km = Math.floor(s*225000000);
+      dr2.textContent = 'DISTANCE: '+km.toLocaleString()+' km';
+      dr5.textContent = 'MISSION DAY: '+Math.floor(s*227).toString().padStart(3,'0');
+    }
+
+    // Reveal scene content
+    revealSceneContent(s);
+    revealColonyCards(s);
+  }
+
+  function revealSceneContent(s){
+    const scenes=[
+      {ey:'ey1',hl:'hl1',sub:'sub1',st:'stats1', start:0.08, end:0.22},
+      {ey:'ey2',hl:'hl2',sub:'sub2',st:'stats2', start:0.23, end:0.37},
+      {ey:'ey3',hl:'hl3',sub:'sub3',st:null, start:0.38, end:0.52},
+      {ey:'ey4',hl:'hl4',sub:'sub4',st:'stats4', start:0.53, end:0.65},
+      {ey:'ey5',hl:'hl5',sub:'sub5',st:null, start:0.66, end:0.78},
+    ];
+    scenes.forEach(sc=>{
+      const inside = s>=sc.start && s<=sc.end;
+      const ey=document.getElementById(sc.ey);
+      const hl=document.getElementById(sc.hl);
+      const sub=document.getElementById(sc.sub);
+      const st=sc.st?document.getElementById(sc.st):null;
+      if(ey) inside ? ey.classList.add('visible') : ey.classList.remove('visible');
+      if(hl) inside ? hl.classList.add('visible') : hl.classList.remove('visible');
+      if(sub) inside ? sub.classList.add('visible') : sub.classList.remove('visible');
+      if(st) inside ? st.classList.add('visible') : st.classList.remove('visible');
+    });
+  }
+
+  function revealColonyCards(s){
+    for(let i=1;i<=6;i++){
+      const card=document.getElementById('cc'+i);
+      if(card) s>0.8 ? card.classList.add('visible') : card.classList.remove('visible');
+    }
+  }
+
+  function updateScene(){
+    const s = scrollProgress;
+
+    // ---- PHASE 1: Hero → Launch (0 → 0.22) ----
+    if(s < 0.22){
+      earth.visible=true; clouds.visible=true; atmosphere.visible=true;
+      rocketGroup.visible=true; mars.visible=false; marsCap.visible=false;
+      asteroidGroup.visible=false; nebula.visible=false;
+      dust.visible=false;
+
+      const t = Math.min(s/0.22, 1);
+      // Camera pulls back from earth surface then rises
+      targetCamZ = 5 - t*1.5;
+      targetCamY = -1 + t*2;
+      targetCamX = 0;
+      targetCamRotX = t*0.1;
+
+      // Rocket launches
+      const rt = Math.max(0, (s-0.05)/0.17);
+      rocketGroup.position.y = -3 + rt*8;
+      rocketGroup.position.x = rt*0.3;
+      rocketGroup.rotation.z = 0.1 - rt*0.15;
+
+      // Earth rotates
+      earth.rotation.y += 0.003;
+      clouds.rotation.y += 0.004;
+
+      // Flame flicker
+      flame.scale.y = 0.8+Math.sin(time*0.3)*0.4+Math.random()*0.2;
+      flameMat.opacity = 0.7+Math.sin(time*0.5)*0.3;
+
+      // Atmosphere glow scales with launch progress
+      atmosphere.scale.setScalar(1+rt*0.05);
+      redFill.intensity = 0;
+    }
+
+    // ---- PHASE 2: Deep Space (0.22 → 0.38) ----
+    else if(s < 0.38){
+      earth.visible=true; clouds.visible=true; atmosphere.visible=true;
+      rocketGroup.visible=true; mars.visible=false; marsCap.visible=false;
+      asteroidGroup.visible=false; nebula.visible=false; dust.visible=false;
+
+      const t = (s-0.22)/0.16;
+      // Camera zooms out to show Earth receding
+      targetCamZ = 3.5 + t*6;
+      targetCamY = 1 - t*0.5;
+      targetCamRotY = -t*0.2;
+
+      earth.scale.setScalar(1 - t*0.6);
+      clouds.scale.setScalar(1 - t*0.6);
+      atmosphere.scale.setScalar(1 - t*0.58);
+      earth.position.x = -t*2;
+      clouds.position.x = -t*2;
+      atmosphere.position.x = -t*2;
+
+      rocketGroup.position.set(t*1, 5+t*3, 2.5-t*2);
+      rocketGroup.visible = t<0.7;
+
+      earth.rotation.y += 0.001;
+      redFill.intensity = 0;
+      starMat.opacity = 0.8 + t*0.2;
+    }
+
+    // ---- PHASE 3: Asteroid Belt (0.38 → 0.53) ----
+    else if(s < 0.53){
+      earth.visible=true; asteroidGroup.visible=true; nebula.visible=true;
+      rocketGroup.visible=false; mars.visible=false; marsCap.visible=false;
+      dust.visible=false;
+
+      const t = (s-0.38)/0.15;
+      targetCamZ = 9.5 - t*3;
+      targetCamY = 0.5 + Math.sin(t*Math.PI)*0.5;
+      targetCamX = Math.sin(t*Math.PI*0.7)*0.3;
+      targetCamRotY = Math.sin(t*Math.PI)*0.08;
+
+      earth.scale.setScalar(0.4-t*0.3);
+      earth.position.x = -2-t*2;
+      clouds.scale.setScalar(0.4-t*0.3);
+      clouds.position.x = -2-t*2;
+      atmosphere.scale.setScalar(0.42-t*0.3);
+      atmosphere.position.x = -2-t*2;
+
+      asteroidGroup.position.z = 10-t*20;
+      asteroids.forEach(a=>{
+        a.mesh.rotation.x+=a.rx; a.mesh.rotation.y+=a.ry;
+        a.mesh.position.z-=a.drift;
+      });
+
+      nebMat.opacity = Math.min(t*1.5, 0.35);
+      nebula.rotation.y += 0.001;
+
+      scene.fog.density = 0.008 + t*0.01;
+    }
+
+    // ---- PHASE 4: Mars Approach (0.53 → 0.68) ----
+    else if(s < 0.68){
+      earth.visible=false; asteroidGroup.visible=false; nebula.visible=false;
+      rocketGroup.visible=false; mars.visible=true; marsCap.visible=true;
+      dust.visible=false; clouds.visible=false; atmosphere.visible=false;
+
+      const t = (s-0.53)/0.15;
+      targetCamZ = 6.5 - t*3;
+      targetCamX = t*0.5;
+      targetCamY = t*0.2;
+      targetCamRotX = -t*0.05;
+
+      mars.scale.setScalar(0.3+t*1.0);
+      marsCap.scale.setScalar(0.3+t*1.0);
+      mars.position.x = 4-t*4;
+      marsCap.position.x = 4-t*4;
+      mars.rotation.y += 0.002;
+      marsCap.rotation.y += 0.002;
+
+      const marsAtm = scene.children.find(c=>c===atmosphere);
+      nebMat.opacity = 0;
+      scene.fog.density = 0.005;
+
+      redFill.intensity = t*1.5;
+      redFill.position.set(mars.position.x, 0, 3);
+    }
+
+    // ---- PHASE 5: Landing (0.68 → 0.80) ----
+    else if(s < 0.80){
+      earth.visible=false; asteroidGroup.visible=false; nebula.visible=false;
+      mars.visible=true; marsCap.visible=true; dust.visible=true;
+      rocketGroup.visible=false; clouds.visible=false; atmosphere.visible=false;
+
+      const t = (s-0.68)/0.12;
+      targetCamZ = 3.5 - t*1.5;
+      targetCamX = -t*0.5;
+      targetCamY = -t*0.8;
+      targetCamRotX = t*0.15;
+
+      mars.scale.setScalar(1.3+t*0.4);
+      marsCap.scale.setScalar(1.3+t*0.4);
+      mars.position.x = 0;
+      marsCap.position.x = 0;
+
+      dustMat.opacity = t*0.6;
+      dust.visible = t>0.1;
+      dust.position.set(0, -2-t, 0);
+
+      // Animate dust
+      const pos = dustGeo.attributes.position.array;
+      dustVel.forEach((v,i)=>{
+        pos[i*3]+=v.vx*(1+t); pos[i*3+1]+=v.vy*(1+t); pos[i*3+2]+=v.vz*(1+t);
+        v.life-=0.005;
+        if(v.life<0){
+          const a=Math.random()*Math.PI*2, r=Math.random()*1.5;
+          pos[i*3]=Math.cos(a)*r; pos[i*3+1]=0; pos[i*3+2]=Math.sin(a)*r;
+          v.life=1;
+        }
+      });
+      dustGeo.attributes.position.needsUpdate=true;
+
+      redFill.intensity = 2-t;
+      scene.fog.density = 0.012;
+    }
+
+    // ---- PHASE 6: Colony (0.80+) ----
+    else {
+      earth.visible=false; asteroidGroup.visible=false; nebula.visible=false;
+      mars.visible=true; marsCap.visible=true; dust.visible=false;
+      rocketGroup.visible=false; clouds.visible=false; atmosphere.visible=false;
+
+      const t = Math.min((s-0.80)/0.15, 1);
+      targetCamZ = 2 + t*0.5;
+      targetCamX = 0;
+      targetCamY = 0;
+
+      mars.scale.setScalar(1.5+t*0.5);
+      mars.position.x = 0;
+      marsCap.scale.setScalar(1.5+t*0.5);
+      marsCap.position.x = 0;
+      mars.rotation.y += 0.001;
+      marsCap.rotation.y += 0.001;
+
+      scene.fog.density = 0.006;
+      redFill.intensity = 0.5+Math.sin(time*0.02)*0.3;
+    }
+  }
+
+  // ---- RENDER LOOP ----
+  function animate(){
+    requestAnimationFrame(animate);
+    time++;
+
+    // Smooth camera
+    camera.position.x += (targetCamX - camera.position.x)*0.05;
+    camera.position.y += (targetCamY - camera.position.y)*0.05;
+    camera.position.z += (targetCamZ - camera.position.z)*0.05;
+    camera.rotation.x += (targetCamRotX - camera.rotation.x)*0.05;
+    camera.rotation.y += (targetCamRotY - camera.rotation.y)*0.05;
+
+    // Slow star rotation
+    stars.rotation.y += 0.00005;
+    stars.rotation.x += 0.000015;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // Initial UI update
+  updateScene();
+  updateUI();
+}
+
+// ============================================================
+// 2D PARTICLE CANVAS — Star streaks / sparks
+// ============================================================
+const pCanvas = document.getElementById('particle-canvas');
+const pCtx = pCanvas.getContext('2d');
+pCanvas.width = window.innerWidth;
+pCanvas.height = window.innerHeight;
+
+const particles = [];
+class Particle {
+  constructor(){this.reset();}
+  reset(){
+    this.x=Math.random()*pCanvas.width;
+    this.y=Math.random()*pCanvas.height;
+    this.vx=(Math.random()-0.5)*0.3;
+    this.vy=-(0.2+Math.random()*0.5);
+    this.alpha=0;
+    this.targetAlpha=Math.random()*0.6;
+    this.size=Math.random()*1.5;
+    this.life=0; this.maxLife=120+Math.random()*200;
+  }
+  update(){
+    this.life++;
+    if(this.life<20) this.alpha+=0.03;
+    else if(this.life>this.maxLife-20) this.alpha-=0.03;
+    this.x+=this.vx; this.y+=this.vy;
+    if(this.life>this.maxLife||this.alpha<0) this.reset();
+  }
+  draw(){
+    pCtx.save();
+    pCtx.globalAlpha=Math.max(0,this.alpha)*0.4;
+    pCtx.fillStyle='#ffffff';
+    pCtx.beginPath();
+    pCtx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    pCtx.fill();
+    pCtx.restore();
+  }
+    }
+  for(let i=0;i<80;i++) particles.push(new Particle());
+
+function animParticles(){
+  pCtx.clearRect(0,0,pCanvas.width,pCanvas.height);
+  const s = window.scrollY/(document.body.scrollHeight-window.innerHeight);
+  // More sparks during launch and landing
+  const intensity = s<0.22 ? Math.min(s/0.22, 1) : (s>0.65&&s<0.80 ? 1 : 0.2);
+  particles.forEach(p=>{
+    p.targetAlpha = intensity*0.6;
+    p.update(); p.draw();
+  });
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+
+window.addEventListener('resize',()=>{
+  pCanvas.width=window.innerWidth; pCanvas.height=window.innerHeight;
+});
+
+// ============================================================
+// SMOOTH SCROLL VELOCITY for camera shake
+// ============================================================
+let lastScroll = 0;
+let scrollVelocity = 0;
+window.addEventListener('scroll', ()=>{
+  scrollVelocity = window.scrollY - lastScroll;
+  lastScroll = window.scrollY;
+});
+</script>
+</body>
+</html>
